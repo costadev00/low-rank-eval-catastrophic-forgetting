@@ -1,0 +1,233 @@
+{
+  "base_scores": {
+    "gsm8k": 88.09704321455648,
+    "ifeval": 80.0369685767098
+  },
+  "benchmark_mean_utility_by_configuration": {
+    "early_heavy": -4.426489568779338,
+    "late_heavy": -5.343486845885302,
+    "middle_heavy": -4.50013243102725,
+    "uniform": -5.043835370715783
+  },
+  "calibration_token_budget_per_task": 50000,
+  "dataset_revisions": {
+    "gsm8k": "740312add88f781978c0658806c59bc2815b9866",
+    "ifeval_eval": "966cd89545d6b6acfd7638bc708b98261ca58e84",
+    "ifeval_train": "56505d1771e36fa5aa07aa9a1b39008fe60a8487",
+    "numina_train": "9d8d210c9f6a36c8f3cd84045668c9b7800ef517"
+  },
+  "decontamination": {
+    "ifeval_like": {
+      "approximate_threshold": 0.9,
+      "candidate_threshold": 0.75,
+      "char_ngram_size": 5,
+      "counts": {
+        "internal_duplicate": 4741
+      },
+      "input_rows": 56339,
+      "num_perm": 64,
+      "output_rows": 51598,
+      "text_field": "prompt",
+      "total_removed": 4741
+    },
+    "numinamath": {
+      "approximate_threshold": 0.9,
+      "candidate_threshold": 0.75,
+      "char_ngram_size": 5,
+      "counts": {
+        "benchmark_approximate": 847,
+        "benchmark_exact": 7662,
+        "internal_duplicate": 57618,
+        "source_benchmark": 7342
+      },
+      "input_rows": 859494,
+      "num_perm": 64,
+      "output_rows": 786025,
+      "text_field": "problem",
+      "total_removed": 73469
+    }
+  },
+  "evaluation_examples_per_checkpoint": {
+    "gsm8k": 1319,
+    "ifeval": 541
+  },
+  "limitations": [
+    "one training seed",
+    "two task families",
+    "4-bit NF4 backbone without a higher-precision control",
+    "DDP sampler padding repeats one packed sequence per task and epoch",
+    "spectral allocation lacks a completed final sequential evaluation"
+  ],
+  "lora_parameters": 5898240,
+  "manual_selection": {
+    "benchmark_fields_used": [],
+    "evidence": [
+      {
+        "calibration_forgetting_percent": {
+          "ifeval": 0.2903506003313995,
+          "math": 0.0
+        },
+        "calibration_net_percent": {
+          "ifeval": 13.282709619692296,
+          "math": 15.592718296635026
+        },
+        "calibration_utility": 14.29253865799796,
+        "configuration": "early_heavy",
+        "run_id": "early_heavy-ifeval_to_math-seed42-7043bd9cbf59d5d8",
+        "task_order": [
+          "ifeval",
+          "math"
+        ]
+      },
+      {
+        "calibration_forgetting_percent": {
+          "ifeval": 0.0,
+          "math": 0.0149781950495456
+        },
+        "calibration_net_percent": {
+          "ifeval": 13.925910454196321,
+          "math": 15.261294576244358
+        },
+        "calibration_utility": 14.586113417695566,
+        "configuration": "early_heavy",
+        "run_id": "early_heavy-math_to_ifeval-seed42-7043bd9cbf59d5d8",
+        "task_order": [
+          "math",
+          "ifeval"
+        ]
+      },
+      {
+        "calibration_forgetting_percent": {
+          "ifeval": 0.42484663684510765,
+          "math": 0.0
+        },
+        "calibration_net_percent": {
+          "ifeval": 13.180380782875044,
+          "math": 15.684949906527327
+        },
+        "calibration_utility": 14.220242026278632,
+        "configuration": "late_heavy",
+        "run_id": "late_heavy-ifeval_to_math-seed42-1f68a175096d58c1",
+        "task_order": [
+          "ifeval",
+          "math"
+        ]
+      },
+      {
+        "calibration_forgetting_percent": {
+          "ifeval": 0.0,
+          "math": 0.0
+        },
+        "calibration_net_percent": {
+          "ifeval": 14.004484082184156,
+          "math": 15.316863318246044
+        },
+        "calibration_utility": 14.6606737002151,
+        "configuration": "late_heavy",
+        "run_id": "late_heavy-math_to_ifeval-seed42-1f68a175096d58c1",
+        "task_order": [
+          "math",
+          "ifeval"
+        ]
+      },
+      {
+        "calibration_forgetting_percent": {
+          "ifeval": 0.5821037456252434,
+          "math": 0.0
+        },
+        "calibration_net_percent": {
+          "ifeval": 13.213553505382784,
+          "math": 15.674808986430062
+        },
+        "calibration_utility": 14.153129373093801,
+        "configuration": "middle_heavy",
+        "run_id": "middle_heavy-ifeval_to_math-seed42-8444d199961fdebe",
+        "task_order": [
+          "ifeval",
+          "math"
+        ]
+      },
+      {
+        "calibration_forgetting_percent": {
+          "ifeval": 0.0,
+          "math": 0.0
+        },
+        "calibration_net_percent": {
+          "ifeval": 14.235342150614768,
+          "math": 15.334271817706197
+        },
+        "calibration_utility": 14.784806984160483,
+        "configuration": "middle_heavy",
+        "run_id": "middle_heavy-math_to_ifeval-seed42-8444d199961fdebe",
+        "task_order": [
+          "math",
+          "ifeval"
+        ]
+      }
+    ],
+    "ifeval_or_gsm8k_used_for_selection": false,
+    "mean_calibration_utility_by_configuration": {
+      "early_heavy": 14.439326037846763,
+      "late_heavy": 14.440457863246866,
+      "middle_heavy": 14.468968178627142
+    },
+    "selected_configuration": "middle_heavy",
+    "selection_data": "decontaminated training-derived calibration splits",
+    "utility_lambda": 1.0
+  },
+  "model": "Qwen/Qwen3-4B-Instruct-2507",
+  "model_revision": "cdbee75f17c01a7cc42f958dc650907174af0554",
+  "scope": "manual allocations, both task orders, seed 42",
+  "spectral_pilot": {
+    "allocation": {
+      "block_ranks": {
+        "0": 24,
+        "1": 20,
+        "10": 12,
+        "11": 12,
+        "12": 16,
+        "13": 16,
+        "14": 12,
+        "15": 12,
+        "16": 12,
+        "17": 12,
+        "18": 12,
+        "19": 12,
+        "2": 20,
+        "20": 12,
+        "21": 12,
+        "22": 12,
+        "23": 16,
+        "24": 16,
+        "25": 16,
+        "26": 16,
+        "27": 20,
+        "28": 16,
+        "29": 16,
+        "3": 20,
+        "30": 16,
+        "31": 20,
+        "32": 16,
+        "33": 16,
+        "34": 16,
+        "35": 12,
+        "4": 24,
+        "5": 24,
+        "6": 20,
+        "7": 16,
+        "8": 16,
+        "9": 16
+      },
+      "difference_parameters": 0,
+      "difference_percent": 0.0,
+      "forced_non_uniform": false,
+      "parameters": 5898240,
+      "reference_parameters": 5898240,
+      "spectral_utility": 34.76023766866302
+    },
+    "status": "allocation produced; final sequential evaluation excluded"
+  },
+  "token_budget_per_task": 1000000,
+  "trainable_percent": 0.14663234383655382,
+  "validated_protocols": 8
+}

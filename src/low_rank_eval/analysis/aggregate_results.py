@@ -225,25 +225,28 @@ def pareto_front(frame: pd.DataFrame) -> pd.DataFrame:
             }
         )
     points_frame = pd.DataFrame(points)
-    is_pareto = []
-    for _, point in points_frame.iterrows():
-        dominated = False
-        for _, other in points_frame.iterrows():
-            no_worse = (
-                other.new_task_plasticity >= point.new_task_plasticity
-                and other.previous_task_retention >= point.previous_task_retention
-                and other.trainable_parameters <= point.trainable_parameters
-            )
-            strictly_better = (
-                other.new_task_plasticity > point.new_task_plasticity
-                or other.previous_task_retention > point.previous_task_retention
-                or other.trainable_parameters < point.trainable_parameters
-            )
-            if no_worse and strictly_better:
-                dominated = True
-                break
-        is_pareto.append(not dominated)
-    points_frame["pareto"] = is_pareto
+    points_frame["pareto"] = False
+    # Acquisition and retention refer to different benchmarks in each order,
+    # so dominance is meaningful only within the same sequential protocol.
+    for _, indices in points_frame.groupby("task_order", sort=False).groups.items():
+        order_points = points_frame.loc[indices]
+        for index, point in order_points.iterrows():
+            dominated = False
+            for _, other in order_points.iterrows():
+                no_worse = (
+                    other.new_task_plasticity >= point.new_task_plasticity
+                    and other.previous_task_retention >= point.previous_task_retention
+                    and other.trainable_parameters <= point.trainable_parameters
+                )
+                strictly_better = (
+                    other.new_task_plasticity > point.new_task_plasticity
+                    or other.previous_task_retention > point.previous_task_retention
+                    or other.trainable_parameters < point.trainable_parameters
+                )
+                if no_worse and strictly_better:
+                    dominated = True
+                    break
+            points_frame.loc[index, "pareto"] = not dominated
     return points_frame
 
 

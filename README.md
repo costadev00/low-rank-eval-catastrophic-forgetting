@@ -200,12 +200,29 @@ uv run python scripts/analyze_results.py --results_dir results
 uv run python scripts/build_paper.py
 ```
 
-`paper/main.tex` is an English ICML-format manuscript for Overleaf. The
-supplied template bundle had scrambled extensions; `scripts/repair_latex_template.py`
-recovers the correct style files. The main text is followed by references and
-appendices. `build_paper.py` refuses to emit result macros unless the complete
-seed/order matrix exists, so preliminary or missing runs cannot silently
-become paper claims.
+The first, explicitly limited paper snapshot uses the eight completed manual
+protocols (four allocations, both task orders, seed 42):
+
+```bash
+uv run python scripts/build_first_paper.py \
+  --results_dir results --config_dir configs --paper_dir paper
+cd paper
+latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=build main.tex
+```
+
+`paper/main.tex` is an English ICML-format manuscript for Overleaf with two
+pages of main text, followed by references and appendices. The corrected style
+files are already included under `paper/`; `scripts/repair_latex_template.py`
+only audits or reconstructs them from the original scrambled bundle. The
+first-paper builder rejects a missing manual protocol, partial benchmark,
+unequal parameter budget, stale configuration, or unexpected token budget.
+It labels the single-seed scope and excludes the unevaluated spectral adapter
+from comparative claims.
+
+The original `scripts/build_paper.py` remains the stricter builder for the
+pre-registered complete matrix. It refuses to emit result macros until the
+spectral protocols and confirmatory seeds exist, so incomplete runs cannot
+silently become full-study claims.
 
 ## Experimental caution
 

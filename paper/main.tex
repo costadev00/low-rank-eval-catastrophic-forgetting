@@ -1,146 +1,362 @@
 \documentclass{article}
 
-\usepackage[accepted]{icml2024}
 \usepackage{microtype}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{hyperref}
-
+\usepackage{xurl}
+\usepackage{placeins}
+\usepackage{iftex}
 \newcommand{\theHalgorithm}{\arabic{algorithm}}
-\icmltitlerunning{Layer-wise LoRA Ranks and Catastrophic Forgetting}
+\usepackage[accepted]{icml2024}
+\ifPDFTeX\else
+  % Tectonic uses XeTeX locally; Overleaf's intended pdfLaTeX path is unchanged.
+  \usepackage{fontspec}
+  \setmainfont{Liberation Serif}
+  \setsansfont{Liberation Sans}
+  \setmonofont{Liberation Mono}
+\fi
+
+\graphicspath{{figures/}}
+\icmltitlerunning{\scriptsize Layer-wise LoRA Rank Allocation}
 
 \InputIfFileExists{generated/results.tex}{}{
   \PackageError{rank-lora-paper}
   {Missing generated/results.tex}
-  {Run the complete experiment matrix and then python scripts/build_paper.py.}
+  {Run python scripts/build_first_paper.py from the repository root.}
 }
 
 \begin{document}
 
 \twocolumn[
-\icmltitle{Do Transformer Layers Prefer Different LoRA Ranks?\\
-A Controlled Study of Sequential Fine-Tuning and Forgetting}
+\icmltitle{Where Should the LoRA Rank Go?\\
+Layer-wise Capacity Placement under Sequential Fine-Tuning}
 
 \begin{icmlauthorlist}
 \icmlauthor{Matheus Costa Monteiro}{independent}
 \end{icmlauthorlist}
-\icmlaffiliation{independent}{Independent Researcher}
-\icmlcorrespondingauthor{Matheus Costa Monteiro}{matheuscostamonteiro.mc@gmail.com}
+\icmlaffiliation{independent}{Independent Researcher, Brazil}
+\icmlcorrespondingauthor{Matheus Costa Monteiro}{\mbox{matheuscostamonteiro.mc@gmail.com}}
+\icmlkeywords{LoRA, QLoRA, continual learning, catastrophic forgetting, rank allocation}
 \vskip 0.3in
 ]
 
+\printAffiliationsAndNotice{}
+
 \begin{abstract}
-Low-rank adaptation usually assigns the same rank to every adapted Transformer
-layer, although layer depth may induce different capacity requirements. We
-study whether reallocating a fixed LoRA parameter budget across depth changes
-both task acquisition and catastrophic forgetting. QLoRA adapters on
-Qwen3-4B-Instruct are trained sequentially on instruction following and
-mathematical reasoning in both task orders. Uniform, early-heavy, middle-heavy,
-late-heavy, and data-driven spectral allocations are compared at equal
-parameter count. \GeneratedAbstractResult
+Low-rank adaptation normally assigns one rank to every adapted Transformer
+block. We isolate where that capacity is placed by sequentially adapting a
+36-block, 4B instruction model to instruction following and mathematics in
+both orders. Uniform, early-heavy, middle-heavy, and late-heavy allocations
+all use exactly \NumLoraParameters{} trainable LoRA parameters. In one
+controlled seed, moving the high-rank region deeper increases IFEval
+stage-to-stage forgetting from 1.85 to 3.14 points among non-uniform
+allocations, whereas math-first backward transfer ranges only from $-0.45$ to
+$+0.30$. The middle-heavy run is the sole protocol to finish above the
+unadapted checkpoint on either benchmark ($+0.30$ GSM8K), yet 15 of 16 final
+benchmark cells decline. Thus rank location changes an order-dependent
+acquisition--retention trade-off, but the evidence does not support a
+task-independent layer preference.
 \end{abstract}
 
-\section{Introduction}
-LoRA freezes pretrained weights and represents each adapted linear update as
-$\Delta W_\ell=B_\ell A_\ell$, where rank $r_\ell$ controls trainable capacity
-\citep{hu2022lora}. A uniform $r_\ell$ is convenient but need not be optimal:
-early, intermediate, and late Transformer blocks play different computational
-roles. Adaptive methods such as AdaLoRA and dEBORA allocate capacity across
-modules \citep{zhang2023adalora,zangrando2025debora}, but their interaction
-with sequential learning remains underexplored.
+\section{Introduction and Related Work}
+Sequential fine-tuning can overwrite capabilities acquired earlier, the
+classical catastrophic-interference problem \citep{mccloskey1989catastrophic}.
+LoRA freezes a weight matrix $W_l$ and learns
+$\Delta W_l=B_lA_l$ with rank $r_l$ \citep{hu2022lora}; QLoRA makes this
+memory-efficient through a frozen 4-bit backbone \citep{dettmers2023qlora}.
+The usual constant $r_l$ assigns equal nominal adaptation capacity at every
+depth. AdaLoRA instead prunes low-importance singular directions
+\citep{zhang2023adalora}, while dEBORA learns layer-wise ranks through bilevel
+optimization \citep{zangrando2025debora}. These methods motivate non-uniform
+capacity, but do not establish how its depth affects backward transfer in
+sequential LLM adaptation.
 
-We isolate allocation from parameter count and scaling. Every experiment adapts
-only \texttt{q\_proj} and \texttt{v\_proj}, uses conventional LoRA with
-$\alpha_\ell=r_\ell$, and matches the rank-16 budget within one percent. We ask
-(i) whether the location of rank affects acquisition and retention, (ii)
-whether the effect depends on task order, and (iii) whether a low-cost spectral
-pilot improves on uniform ranks.
+We ask two questions: \emph{Do early, middle, and late blocks respond
+differently when given more rank? Can non-uniform rank improve new-task
+learning without increasing forgetting?} Our controlled study holds data,
+token budget, LoRA scaling, and parameter count fixed. It contributes (i) an
+exact-budget comparison in both task orders, (ii) stage-wise acquisition and
+backward-transfer measurements, and (iii) a reproducible spectral allocator
+whose pilot outcome is reported separately, without claiming an unevaluated
+benchmark result.
 
-\section{Experimental protocol}
-\paragraph{Tasks and contamination control.}
-Instruction following is trained on the filtered IFEval-like corpus and
-evaluated on the official IFEval benchmark using prompt-level strict accuracy
-\citep{zhou2023ifeval}. Mathematical reasoning is trained on NuminaMath-CoT
-\citep{li2024numinamath} and evaluated by numerical exact match on GSM8K
-\citep{cobbe2021gsm8k}. Before splitting, benchmark-source rows, normalized
-exact hashes, and approximate character-$5$-gram matches above 0.90 are
-removed. Training and calibration are disjoint and contain no evaluation
-prompts. Each task contributes exactly one million supervised assistant tokens.
+\section{Problem and Experimental Design}
+Let $\mathcal{M}_l$ be the adapted projections in block $l$. For rank vector
+$\mathbf r=(r_0,\ldots,r_{L-1})$, its exact capacity cost is
+\begin{equation}
+ C(\mathbf r)=\sum_{l=0}^{L-1}\sum_{W\in\mathcal{M}_l}
+ r_l\,[m(W)+n(W)].
+ \label{eq:budget}
+\end{equation}
+We compare vectors satisfying $C(\mathbf r)=C(16\mathbf 1)$ and set
+$\alpha_l=r_l$, so $\alpha_l/r_l=1$. If $S_i^t$ is benchmark $i$ after stage
+$t\in\{0,1,2\}$, we follow \citet{lopezpaz2017gem} and define first-task
+backward transfer as $\mathrm{BWT}_1=S_1^2-S_1^1$ (negative values indicate
+forgetting). Final net performance is $N_i=S_i^2-S_i^0$. We report each task
+separately and define the descriptive utility
+$U=\mathrm{mean}_i(N_i)-\mathrm{mean}_i(\max_t S_i^t-S_i^2)$ only as a
+secondary summary.
 
-\paragraph{Sequential QLoRA.}
-We use NF4 4-bit QLoRA \citep{dettmers2023qlora}, BF16 computation, gradient
-checkpointing, a learning rate of $2{\times}10^{-4}$, and an effective batch
-size of 16. The same adapter is trained on task 1, saved, reloaded, and
-continued on task 2; optimizer and scheduler are reset between tasks. Both
-orders are evaluated at the base, stage-1, and stage-2 checkpoints.
+The starting checkpoint is Qwen3-4B-Instruct-2507 \citep{qwen3report}, not an
+untrained base LM. LoRA targets only \texttt{q\_proj} and \texttt{v\_proj}.
+The 36 blocks form three contiguous groups; ranks are $(16,16,16)$ or a
+permutation of $(32,8,8)$. The same adapter learns IFEval-like instruction
+data then NuminaMath, or the reverse, with optimizer state reset at the task
+boundary. We evaluate stages 0--2 on all 541 IFEval prompts (strict prompt
+accuracy) and 1,319 GSM8K test problems (numeric exact match)
+\citep{zhou2023ifeval,cobbe2021gsm8k}. Appendix~\ref{app:protocol} gives the
+full protocol and contamination controls.
 
-\paragraph{Rank allocations.}
-The 36 blocks are partitioned into 12 early, 12 middle, and 12 late blocks.
-Uniform ranks are $(16,16,16)$; the three manual allocations are permutations
-of $(32,8,8)$. All contain \NumLoraParameters trainable LoRA parameters.
-The spectral pilot trains rank 32 on an equal-token task mixture. Singular
-values of $BA$ are computed from QR factorizations of $B$ and $A^\top$ and an
-SVD of the resulting $32{\times}32$ matrix. Marginal spectral energy then
-allocates ranks from $\{4,8,\ldots,32\}$ under the same budget.
-
-\section{Results}
-\begin{figure}[t]
+\begin{figure*}[t]
   \centering
-  \includegraphics[width=\columnwidth]{../results/figures/performance_by_stage.pdf}
-  \caption{Benchmark performance at the base, stage-1, and stage-2 checkpoints.
-  All values are on a 0--100 scale.}
-  \label{fig:stages}
-\end{figure}
+  \includegraphics[width=\textwidth]{teaser.pdf}
+  \caption{Fixed-budget allocations and their sequential behavior (seed 42).
+  \textbf{(a)} Rank by depth; each pattern has \NumLoraParameters{} parameters.
+  \textbf{(b)} Task-1 score immediately after learning it, relative to the
+  unadapted checkpoint. \textbf{(c)} Task-1 backward transfer after task 2;
+  values left of zero indicate forgetting. Rank placement changes retention,
+  but the direction and magnitude depend on task order.}
+  \label{fig:teaser}
+\end{figure*}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{../results/figures/forgetting_by_configuration.pdf}
-  \caption{Forgetting by rank allocation and benchmark. Lower is better.}
-  \label{fig:forgetting}
-\end{figure}
+\section{Results and Discussion}
+The unadapted checkpoint scores \BaseIFEval{} on IFEval and \BaseGSM{} on
+GSM8K. Figure~\ref{fig:teaser}b shows negative first-task acquisition for all
+eight protocols. Across both tasks and orders, \NegativeFinalCells{} of 16
+final cells remain below the starting checkpoint, despite lower
+training-derived calibration NLL in every run. The experiment therefore
+measures benchmark-level negative acquisition followed by sequential
+interference; a final loss should not automatically be called forgetting.
 
-We define forgetting as the best observed score minus the final score, backward
-transfer as final minus immediate post-learning performance, and net gain as
-final minus base. Figure~\ref{fig:stages} exposes acquisition and retention
-without mixing IFEval and GSM8K into a single headline metric.
-\GeneratedMainResult
+\textbf{Rank location changes retention.} With IFEval first, uniform ranks
+lose only \UniformIFForgetting{} points from stage 1 to stage 2. Among
+non-uniform patterns, forgetting rises from 1.85 (early-heavy) through 2.03
+(middle-heavy) to \LateIFForgetting{} (late-heavy). With mathematics first,
+the pattern changes: uniform gains 0.30 points after instruction training,
+middle- and late-heavy gain 0.08, and early-heavy loses 0.45. The effect is
+therefore strongly order-dependent rather than a fixed preference for one
+depth region.
 
-The manual allocation promoted to three seeds was selected only through
-assistant-token negative log-likelihood on decontaminated calibration data.
-The selected configuration was \SelectedManualConfig; neither IFEval nor GSM8K
-participated in that decision. \GeneratedOrderResult
+\textbf{Non-uniform ranks yield task-specific, not universal, advantages.}
+For IFEval$\rightarrow$Math, middle-heavy is the only run with positive final
+GSM8K net performance (\MiddleMathNet{}), while uniform preserves the highest
+final IFEval score (75.97). In the reverse order, late-heavy gives the best
+final IFEval score (\LateFinalIFEval{}), whereas middle-heavy gives the best
+GSM8K retention (87.26). Early-heavy has the best mean benchmark utility
+(\EarlyMeanUtility{} versus \LateMeanUtility{} for late-heavy), while a
+benchmark-free calibration rule selects \SelectedManualConfig{} among the
+three non-uniform candidates. The exact table and Pareto views are in
+Appendix~\ref{app:results}. Several differences correspond to only a few
+benchmark items, and one seed provides no estimate of training variance.
 
 \section{Conclusion}
-\GeneratedConclusion
-These findings characterize a budget-allocation effect rather than proving
-that non-uniform ranks are universally superior. Future work should test more
-task families, model scales, and longer task sequences.
+Under an equal LoRA budget, where rank is placed changes sequential
+interference, but no allocation dominates both tasks and orders. Uniform rank
+best protects instruction following when learned first; middle and late
+capacity can improve different endpoints in the reverse order. Selection
+should remain order-aware and benchmark-independent, although whether
+calibration NLL predicts external retention remains unresolved. Multi-seed and
+higher-precision controls are required before interpreting these descriptive
+effects as stable layer preferences.
 
 \clearpage
 \bibliography{references}
 \bibliographystyle{icml2024}
 
+\clearpage
 \appendix
-\section{Reproducibility details}
-The released pipeline pins model and dataset revisions, stores the complete
-rank pattern, logs parameters and peak memory per GPU, saves all generations,
-and supports resumption at each training stage. Scores are generated greedily
-with temperature zero. The initial sweep uses seed 42; uniform, the selected
-manual allocation, and the spectral allocation use seeds 7, 42, and 123.
 
-\section{Additional diagnostics}
-\begin{figure}[h]
+\section{Protocol and Reproducibility}
+\label{app:protocol}
+
+\paragraph{Model and optimization.}
+We use \texttt{Qwen/Qwen3-4B-Instruct-2507} at revision
+\path{cdbee75f17c01a7cc42f958dc650907174af0554}. The frozen backbone uses
+4-bit NF4 quantization with double quantization and BF16 computation; training
+uses gradient checkpointing and SDPA. Conventional LoRA is applied to 72
+modules (\texttt{q\_proj} and \texttt{v\_proj} in 36 blocks), with no RSLoRA,
+dropout 0.05, and module-wise scaling exactly one. Every allocation contains
+\NumLoraParameters{} trainable parameters (\TrainablePercent{} of the 4.02B
+parameter model), verified after PEFT instantiation. Four DDP processes each
+hold one quantized replica. The effective batch size is 16, maximum sequence
+length 2,048, learning rate $2\times10^{-4}$ with cosine decay and 3\%
+warm-up, and weight decay zero. Optimizer and scheduler are reinitialized at
+stage 2 while the stage-1 adapter weights are loaded as trainable parameters.
+
+\paragraph{Data and token control.}
+Instruction training uses the \texttt{filtered} configuration of
+\texttt{argilla/ifeval-like-data} \citep{argillaifevallike}; mathematics uses
+\texttt{AI-MO/NuminaMath-CoT} \citep{li2024numinamath}. Each stage's unique
+prepared split contains exactly 1,000,000 supervised assistant tokens;
+calibration contains 50,000 per task. The official tokenizer chat template is
+used, and labels outside the assistant answer are $-100$. Packing preserves
+these labels. The budgets draw from 7,036 instruction and 2,302 math source
+examples, packed into 847 and 707 training sequences, respectively.
+
+Decontamination precedes splitting. Text is Unicode-NFKC normalized and
+checked by SHA-256 exact hashes, MinHash candidates over character 5-grams,
+and confirmed similarity at 0.90. From 56,339 IFEval-like rows, 4,741 internal
+duplicates are removed, leaving 51,598; no official IFEval prompt remains.
+From 859,494 NuminaMath rows, the pipeline exclusively removes 7,342 rows by
+GSM8K source, 7,662 exact benchmark matches, 847 approximate matches, and
+57,618 internal duplicates, leaving 786,025. A final audit finds zero exact
+overlap with the 541 IFEval prompts and 8,792 GSM8K train-plus-test prompts.
+Fingerprint-addressed preprocessing directories store removed-item hashes and
+token manifests; each resolved run configuration links the corresponding
+model, dataset, and preprocessing revisions.
+
+\paragraph{Evaluation and integrity.}
+Generation is deterministic (greedy decoding) with separate output limits for
+the two benchmarks. IFEval uses the official verifiers distributed with
+\texttt{lm-eval==0.4.12}; GSM8K retains raw generations and applies a tested
+numeric final-answer extractor. All 17 distinct evaluation points (one cached
+starting checkpoint and two stages for eight protocols) contain the complete
+benchmarks. All 16 adapters are saved as safetensors and were reloaded for
+evaluation. Each protocol trained on four GPUs and took approximately 14
+minutes for the two training stages, excluding generation-based evaluation.
+
+\begin{table}[h]
   \centering
-  \includegraphics[width=.8\textwidth]{../results/figures/rank_by_depth.pdf}
-  \caption{Applied rank as a function of Transformer depth.}
-\end{figure}
-\begin{figure}[h]
+  \caption{Manual rank patterns. Early, middle, and late each contain 12
+  blocks. Exact parameter equality follows from identical projection shapes.}
+  \label{tab:ranks}
+  \resizebox{\columnwidth}{!}{\input{generated/rank_table.tex}}
+\end{table}
+
+\section{Complete Stage-wise Results}
+\label{app:results}
+
+\begin{table*}[t]
   \centering
-  \includegraphics[width=.8\textwidth]{../results/figures/spectral_energy_curves.pdf}
-  \caption{Cumulative spectral-energy curves from the discarded pilot adapter.}
-\end{figure}
+  \small
+  \caption{All benchmark scores (0--100). I and M denote instruction and
+  mathematics. $\mathrm{BWT}_1=S_1^2-S_1^1$; positive values indicate that
+  training task 2 improved the first-task benchmark. Boldface is intentionally
+  omitted because the best endpoint depends on the comparison of interest.}
+  \label{tab:all-results}
+  \resizebox{\textwidth}{!}{\input{generated/stage_results_table.tex}}
+\end{table*}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.88\textwidth]{stage_trajectories.pdf}
+  \caption{Absolute benchmark trajectories. Stage 1 follows the first task in
+  the named order; stage 2 follows the second. Axes are independently focused
+  within panels, so numerical comparisons should use Table~\ref{tab:all-results}.}
+  \label{fig:trajectories}
+\end{figure*}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.53\textwidth]{first_task_interference.pdf}\hfill
+  \includegraphics[width=0.40\textwidth]{final_net_heatmap.pdf}
+  \caption{\textbf{Left:} first-task backward transfer. Instruction-following
+  retention is more rank-sensitive when mathematics is learned second;
+  math-first interference is small and sometimes positive. \textbf{Right:}
+  final score minus the unadapted checkpoint; middle-heavy
+  IFEval$\rightarrow$Math GSM8K is the only positive cell.}
+  \label{fig:bwt}\label{fig:net}
+\end{figure*}
+
+The manual-selection utility uses only decontaminated calibration NLL. Among
+the predeclared non-uniform candidates it selects middle-heavy: mean utilities
+are 14.439 (early), 14.469 (middle), and 14.440 (late). Uniform is the
+experimental reference and was excluded from that selection; had it been
+eligible, its mean calibration utility of 14.507 would be largest. No IFEval
+or GSM8K score participates in selection.
+
+At the benchmark level, mean descriptive utility across orders is $-4.426$
+(early), $-4.500$ (middle), $-5.044$ (uniform), and $-5.343$ (late). Because
+all configurations have the same parameter count, no performance--parameter
+curve can be identified; Figure~\ref{fig:parameters} displays the controlled
+vertical slice rather than introducing artificial jitter.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.57\textwidth]{calibration_benchmark_contrast.pdf}\hfill
+  \includegraphics[width=0.38\textwidth]{performance_vs_parameters.pdf}
+  \caption{\textbf{Left:} every adapter improves assistant-token NLL on the
+  decontaminated, training-derived calibration splits, while mean external
+  benchmark net performance is negative; the panels use distinct units.
+  \textbf{Right:} mean final net score at the common 5.898M-parameter budget;
+  every point has the same true horizontal coordinate.}
+  \label{fig:calibration-gap}\label{fig:parameters}
+\end{figure*}
+
+\FloatBarrier
+
+\section{Spectral Pilot and Automatic Allocation}
+\label{app:spectral}
+
+The separate pilot trains uniform rank 32 on an alternating, equal-token mix
+of the two decontaminated training sets. For $B=Q_BR_B$ and
+$A^\top=Q_AR_A$, the nonzero singular values of $BA$ equal those of the small
+matrix $R_BR_A^\top$. Tests against an explicit SVD verify this identity. We
+average normalized cumulative energy from \texttt{q\_proj} and
+\texttt{v\_proj} within each block, then allocate increments from
+$\{4,8,\ldots,32\}$ by marginal energy under Equation~\ref{eq:budget}.
+
+The pilot produces the exact-budget vector
+\begin{multline*}
+(24,20,20,20,24,24,20,16,16,16,12,12,\\
+16,16,12,12,12,12,12,12,12,12,12,16,\\
+16,16,16,20,16,16,16,20,16,16,16,12).
+\end{multline*}
+It is non-uniform without a forced tie-break and contains exactly
+\NumLoraParameters{} parameters. Its final two-order sequential evaluation
+was not completed, so it is excluded from every comparative claim in the main
+paper. The pilot adapter is never reused for final training.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.84\textwidth]{spectral_pilot.pdf}
+  \caption{Pilot-only spectral allocation (left) and cumulative energy of the
+  factorized updates (right). Thin curves are block-wise averages over the two
+  target modules; the thick curve is their median.}
+  \label{fig:spectral}
+\end{figure*}
+
+\FloatBarrier
+
+\section{Limitations and Next Experiments}
+The sweep has one training seed. Full-benchmark evaluation removes sampling
+noise from prompt subsampling, but not optimization variance; standard
+deviations and confidence intervals are therefore unavailable. One correct
+item changes IFEval by 0.1848 point and GSM8K by 0.0758 point, so the smallest
+gaps should not be overinterpreted. The study covers one instruction
+checkpoint, two task families, two target projections, and a 4-bit NF4
+backbone without a BF16 or full-finetuning control. The high initial benchmark
+scores also leave limited headroom and may make the post-trained checkpoint
+sensitive to supervised adaptation. Because the packed training-set sizes are
+not divisible by four, the standard DDP sampler pads each epoch by one
+sequence; this exposure is identical across allocations but means physical
+token presentations slightly exceed the unique prepared-token budget.
+
+The next decisive experiment is three seeds for uniform, middle-heavy (the
+benchmark-free selected manual candidate), and the spectral allocation in
+both orders. A higher-precision control would test whether the observed
+external-benchmark degradation is specific to quantized adaptation. Longer
+task sequences and the \texttt{q/k/v/o} ablation would then test whether the
+order-dependent pattern generalizes beyond the present setting.
+
+\section{Artifact Generation}
+From the repository root, the audited paper snapshot and all vector figures
+are regenerated with:
+{\scriptsize
+\begin{verbatim}
+uv run python scripts/analyze_results.py \
+  --results_dir results \
+  --config_dir configs
+uv run python \
+  scripts/build_first_paper.py
+\end{verbatim}
+}
+The builder rejects any missing protocol, non-scientific manifest, stale
+configuration fingerprint, incomplete benchmark, unequal parameter budget, or
+unexpected token budget. The generated CSV and JSON snapshot under
+\texttt{paper/data/} provide the exact inputs used by this manuscript.
 
 \end{document}
-
