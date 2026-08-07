@@ -29,11 +29,13 @@ def _cleanup() -> None:
 
 
 def _base_cache_key(config: ExperimentConfig) -> str:
+    evaluation = config.evaluation.model_dump(mode="json")
+    evaluation.pop("calibration_batch_size", None)
     payload = {
         "model": config.model.model_dump(mode="json"),
         "ifeval": config.data.ifeval_eval.model_dump(mode="json"),
         "gsm8k": config.data.gsm8k_eval.model_dump(mode="json"),
-        "evaluation": config.evaluation.model_dump(mode="json"),
+        "evaluation": evaluation,
         "processed_data": config.data_fingerprint(),
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))

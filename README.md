@@ -148,7 +148,9 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 uv run python scripts/run_full_study.py \
 
 Its current step is written to `results/full_study_state.json`. Every nested
 training command retains the same checkpoint- and evaluation-level resumption
-semantics described above.
+semantics described above. Generation uses `evaluation.batch_size`, while the
+full-vocabulary calibration NLL uses the independently configurable
+`evaluation.calibration_batch_size` (default `1`) to bound peak memory.
 
 All scripts are idempotent. A completed stage has `stage_complete.json`;
 interrupted Trainer stages resume from the latest `checkpoint-*`. Stage 2

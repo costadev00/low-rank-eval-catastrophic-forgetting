@@ -10,8 +10,9 @@ from low_rank_eval.analysis.plots import plot_all
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--results_dir", default="results")
+    parser.add_argument("--config_dir", default="configs")
     args = parser.parse_args()
-    write_aggregates(args.results_dir)
+    write_aggregates(args.results_dir, config_dir=args.config_dir)
     plot_all(args.results_dir)
 
 

@@ -12,7 +12,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _write_state(step: str, status: str, command: list[str] | None = None) -> None:
+def _write_state(
+    step: str,
+    status: str,
+    command: list[str] | None = None,
+    error: dict[str, object] | None = None,
+) -> None:
     destination = ROOT / "results" / "full_study_state.json"
     destination.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -20,15 +25,28 @@ def _write_state(step: str, status: str, command: list[str] | None = None) -> No
         "status": status,
         "updated_at": datetime.now(UTC).isoformat(),
         "command": command,
+        "error": error,
     }
-    destination.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    temporary = destination.with_suffix(".tmp")
+    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(destination)
 
 
 def _run(step: str, command: list[str]) -> None:
     _write_state(step, "running", command)
     environment = dict(os.environ)
     environment["PYTHONUNBUFFERED"] = "1"
-    subprocess.run(command, cwd=ROOT, env=environment, check=True)
+    try:
+        subprocess.run(command, cwd=ROOT, env=environment, check=True)
+    except BaseException as exc:
+        failure: dict[str, object] = {
+            "type": type(exc).__name__,
+            "message": str(exc),
+        }
+        if isinstance(exc, subprocess.CalledProcessError):
+            failure["returncode"] = exc.returncode
+        _write_state(step, "failed", command, failure)
+        raise
     _write_state(step, "complete", command)
 
 
@@ -73,7 +91,14 @@ def main() -> None:
     )
     _run(
         "initial_analysis",
-        [python, "scripts/analyze_results.py", "--results_dir", args.results_dir],
+        [
+            python,
+            "scripts/analyze_results.py",
+            "--results_dir",
+            args.results_dir,
+            "--config_dir",
+            args.config_dir,
+        ],
     )
     _run(
         "confirmatory_matrix",
@@ -92,7 +117,14 @@ def main() -> None:
     )
     _run(
         "final_analysis",
-        [python, "scripts/analyze_results.py", "--results_dir", args.results_dir],
+        [
+            python,
+            "scripts/analyze_results.py",
+            "--results_dir",
+            args.results_dir,
+            "--config_dir",
+            args.config_dir,
+        ],
     )
     _run("paper", [python, "scripts/build_paper.py"])
     _write_state("complete", "complete")

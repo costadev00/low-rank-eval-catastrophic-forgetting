@@ -9,15 +9,63 @@ from typing import Any
 import pandas as pd
 from scipy import stats
 
+from low_rank_eval.config import load_config
+
 MANUAL_CONFIGS = {"early_heavy", "middle_heavy", "late_heavy"}
 
 
-def load_run_results(results_dir: str | Path) -> list[dict[str, Any]]:
+def _expected_fingerprint(payload: dict[str, Any], config_dir: Path) -> str | None:
+    configuration = str(payload.get("configuration", ""))
+    config_path = config_dir / f"{configuration}.yaml"
+    if not config_path.exists():
+        return None
+    seed = int(payload["seed"])
+    config = load_config(config_path)
+    config = config.model_copy(
+        update={
+            "training": config.training.model_copy(update={"seed": seed}),
+            "lora": config.lora.model_copy(update={"random_seed": seed}),
+        }
+    )
+    return config.fingerprint()
+
+
+def load_run_results(
+    results_dir: str | Path,
+    *,
+    config_dir: str | Path | None = None,
+) -> list[dict[str, Any]]:
     root = Path(results_dir)
+    current_configs = Path(config_dir) if config_dir is not None else None
     results = []
+    logical_cells: set[tuple[str, tuple[str, ...], int]] = set()
     for path in sorted((root / "runs").glob("*/result.json")):
         with path.open(encoding="utf-8") as handle:
             payload = json.load(handle)
+        manifest_path = path.parent / "run_manifest.json"
+        if not manifest_path.exists():
+            continue
+        with manifest_path.open(encoding="utf-8") as handle:
+            manifest = json.load(handle)
+        run_id = str(payload.get("run_id", ""))
+        if (
+            manifest.get("scientific") is not True
+            or manifest.get("run_id") != run_id
+            or path.parent.name != run_id
+        ):
+            continue
+        if current_configs is not None:
+            expected = _expected_fingerprint(payload, current_configs)
+            if expected is None or manifest.get("config_fingerprint") != expected:
+                continue
+        logical_cell = (
+            str(payload["configuration"]),
+            tuple(payload["task_order"]),
+            int(payload["seed"]),
+        )
+        if logical_cell in logical_cells:
+            raise RuntimeError(f"Duplicate scientific result for logical cell {logical_cell}")
+        logical_cells.add(logical_cell)
         payload["_path"] = str(path)
         results.append(payload)
     return results
@@ -69,8 +117,12 @@ def _flatten_run(run: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def aggregate_runs(results_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame]:
-    runs = load_run_results(results_dir)
+def aggregate_runs(
+    results_dir: str | Path,
+    *,
+    config_dir: str | Path | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    runs = load_run_results(results_dir, config_dir=config_dir)
     rows = [row for run in runs for row in _flatten_run(run)]
     frame = pd.DataFrame(rows)
     if frame.empty:
@@ -195,11 +247,15 @@ def pareto_front(frame: pd.DataFrame) -> pd.DataFrame:
     return points_frame
 
 
-def write_aggregates(results_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+def write_aggregates(
+    results_dir: str | Path,
+    *,
+    config_dir: str | Path | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     root = Path(results_dir)
     output = root / "aggregates"
     output.mkdir(parents=True, exist_ok=True)
-    frame, statistics = aggregate_runs(root)
+    frame, statistics = aggregate_runs(root, config_dir=config_dir)
     if frame.empty:
         raise RuntimeError(f"No completed run results found under {root / 'runs'}")
     frame.to_csv(output / "all_results.csv", index=False)
@@ -207,7 +263,7 @@ def write_aggregates(results_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFram
     pareto_front(frame).to_csv(output / "pareto_front.csv", index=False)
     with (output / "all_results.json").open("w", encoding="utf-8") as handle:
         json.dump(frame.to_dict(orient="records"), handle, indent=2)
-    runs = load_run_results(root)
+    runs = load_run_results(root, config_dir=config_dir)
     try:
         selection = select_best_manual(runs)
     except RuntimeError as error:
@@ -220,8 +276,9 @@ def write_aggregates(results_dir: str | Path) -> tuple[pd.DataFrame, pd.DataFram
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--results_dir", default="results")
+    parser.add_argument("--config_dir", default="configs")
     args = parser.parse_args()
-    write_aggregates(args.results_dir)
+    write_aggregates(args.results_dir, config_dir=args.config_dir)
 
 
 if __name__ == "__main__":

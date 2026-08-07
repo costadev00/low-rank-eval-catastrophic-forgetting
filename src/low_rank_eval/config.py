@@ -126,6 +126,7 @@ class LoraConfig(StrictModel):
 class EvaluationConfig(StrictModel):
     engine: Literal["local_lm_eval_verifiers", "lm_eval"] = "local_lm_eval_verifiers"
     batch_size: int = Field(1, gt=0)
+    calibration_batch_size: int = Field(1, gt=0)
     ifeval_max_new_tokens: int = Field(1280, gt=0)
     gsm8k_max_new_tokens: int = Field(512, gt=0)
     limit: int | None = Field(None, gt=0)
@@ -179,7 +180,13 @@ class ExperimentConfig(StrictModel):
         return json.loads(self.model_dump_json(exclude_none=False))
 
     def fingerprint(self) -> str:
-        payload = json.dumps(self.canonical_dict(), sort_keys=True, separators=(",", ":"))
+        fingerprint_data = self.canonical_dict()
+        # Calibration batching is an operational memory-control setting. It does not
+        # change examples, model weights, deterministic generations, or the
+        # token-weighted NLL definition. Excluding it preserves resumability when the
+        # same experiment is evaluated with a safer batch size.
+        fingerprint_data["evaluation"].pop("calibration_batch_size", None)
+        payload = json.dumps(fingerprint_data, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
     def data_fingerprint(self) -> str:

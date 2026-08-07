@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import json
 from pathlib import Path
 from typing import Any
@@ -191,6 +192,9 @@ def evaluate_checkpoint(
         accelerator.wait_for_everyone()
     calibration_nll: dict[str, float] = {}
     if calibration_paths:
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         collator = DataCollatorForSeq2Seq(
             tokenizer=tokenizer,
             model=None,
@@ -213,7 +217,7 @@ def evaluate_checkpoint(
             )
             loader = DataLoader(
                 dataset,
-                batch_size=config.evaluation.batch_size,
+                batch_size=config.evaluation.calibration_batch_size,
                 shuffle=False,
                 collate_fn=collator,
             )
@@ -224,8 +228,10 @@ def evaluate_checkpoint(
                 count = int((batch["labels"] != -100).sum())
                 with torch.inference_mode():
                     loss = model(**batch).loss
-                nll_sum += float(loss) * count
+                loss_value = float(loss)
+                nll_sum += loss_value * count
                 token_count += count
+                del loss, batch
             totals = torch.tensor(
                 [nll_sum, float(token_count)],
                 dtype=torch.float64,
