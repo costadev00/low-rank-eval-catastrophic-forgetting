@@ -1,9 +1,8 @@
 # Paper artifact
 
 `main.tex` is the audited first report based on the eight completed manual
-protocols: four fixed-budget rank allocations, two task orders, and seed 42.
-It intentionally does not claim a completed benchmark comparison for the
-spectral allocation.
+protocols: three depth-heavy rank allocations plus a uniform reference, two
+task orders, and seed 42.
 
 Regenerate all tables and figures from the repository root:
 

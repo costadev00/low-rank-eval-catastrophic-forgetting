@@ -10,10 +10,9 @@ or marker shapes provide redundant encoding where series must be compared.
 | `rank_by_depth` | Where is the equal budget placed? | Step curve over 36 blocks | All manual patterns have identical total parameters. |
 | `stage_trajectories` | How do benchmark scores move at each stage? | Small multiples by order and benchmark | Most trajectories remain below the unadapted checkpoint. |
 | `first_task_interference` | How much does task 2 change task 1? | Diverging horizontal bars | IFEval-first BWT is more rank-sensitive than math-first BWT. |
-| `final_net_heatmap` | Which final endpoints beat the starting checkpoint? | Annotated matrix of stage-2 minus base | Only middle-heavy IFEval-to-Math GSM8K is positive. |
+| `final_net_heatmap` | Which final endpoints beat the starting checkpoint? | Annotated matrix of after-task-2 minus base | Only middle-heavy IFEval-to-Math GSM8K is positive. |
 | `calibration_benchmark_contrast` | Do calibration gains transfer externally? | Two aligned bar panels with distinct units | Calibration NLL improves while benchmark net performance declines. |
 | `performance_vs_parameters` | Is there a parameter-efficiency frontier here? | Vertical slice at the exact common parameter count | Parameter count is controlled, so no horizontal frontier is identifiable. |
-| `spectral_pilot` | What allocation does the discarded pilot propose? | Block ranks and cumulative energy curves | The pilot produces a non-uniform exact-budget vector; it is not a benchmark result. |
 
 QA checks: exact values are printed in the appendix table; focused axes are
 disclosed in captions; the heatmap annotates every cell; the parameter plot

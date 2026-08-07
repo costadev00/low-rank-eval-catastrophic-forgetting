@@ -49,8 +49,9 @@ Layer-wise Capacity Placement under Sequential Fine-Tuning}
 Low-rank adaptation normally assigns one rank to every adapted Transformer
 block. We isolate where that capacity is placed by sequentially adapting a
 36-block, 4B instruction model to instruction following and mathematics in
-both orders. Uniform, early-heavy, middle-heavy, and late-heavy allocations
-all use exactly \NumLoraParameters{} trainable LoRA parameters. In one
+both orders. We compare early-heavy, middle-heavy, and late-heavy allocations
+against a uniform-rank reference; all use exactly \NumLoraParameters{}
+trainable LoRA parameters. In one
 controlled seed, moving the high-rank region deeper increases IFEval
 stage-to-stage forgetting from 1.85 to 3.14 points among non-uniform
 allocations, whereas math-first backward transfer ranges only from $-0.45$ to
@@ -79,9 +80,9 @@ differently when given more rank? Can non-uniform rank improve new-task
 learning without increasing forgetting?} Our controlled study holds data,
 token budget, LoRA scaling, and parameter count fixed. It contributes (i) an
 exact-budget comparison in both task orders, (ii) stage-wise acquisition and
-backward-transfer measurements, and (iii) a reproducible spectral allocator
-whose pilot outcome is reported separately, without claiming an unevaluated
-benchmark result.
+backward-transfer measurements, and (iii) an explicit separation between
+benchmark acquisition after the first task and interference caused by the
+second task.
 
 \section{Problem and Experimental Design}
 Let $\mathcal{M}_l$ be the adapted projections in block $l$. For rank vector
@@ -92,8 +93,12 @@ $\mathbf r=(r_0,\ldots,r_{L-1})$, its exact capacity cost is
  \label{eq:budget}
 \end{equation}
 We compare vectors satisfying $C(\mathbf r)=C(16\mathbf 1)$ and set
-$\alpha_l=r_l$, so $\alpha_l/r_l=1$. If $S_i^t$ is benchmark $i$ after stage
-$t\in\{0,1,2\}$, we follow \citet{lopezpaz2017gem} and define first-task
+$\alpha_l=r_l$, so $\alpha_l/r_l=1$. A \emph{stage} is a temporal checkpoint,
+not a group of Transformer blocks: stage 0 is the unadapted checkpoint; stage
+1 is the same model after its newly initialized adapter learns the first task;
+stage 2 is after that same adapter continues training on the second task. Both
+benchmarks are evaluated at every stage. If $S_i^t$ is benchmark $i$ after
+stage $t\in\{0,1,2\}$, we follow \citet{lopezpaz2017gem} and define first-task
 backward transfer as $\mathrm{BWT}_1=S_1^2-S_1^1$ (negative values indicate
 forgetting). Final net performance is $N_i=S_i^2-S_i^0$. We report each task
 separately and define the descriptive utility
@@ -115,10 +120,11 @@ full protocol and contamination controls.
   \includegraphics[width=\textwidth]{teaser.pdf}
   \caption{Fixed-budget allocations and their sequential behavior (seed 42).
   \textbf{(a)} Rank by depth; each pattern has \NumLoraParameters{} parameters.
-  \textbf{(b)} Task-1 score immediately after learning it, relative to the
-  unadapted checkpoint. \textbf{(c)} Task-1 backward transfer after task 2;
-  values left of zero indicate forgetting. Rank placement changes retention,
-  but the direction and magnitude depend on task order.}
+  \textbf{(b)} Task-1 score at stage 1---immediately after learning the first
+  task---relative to stage 0. \textbf{(c)} Change in the first-task score from
+  stage 1 to stage 2, after the same adapter learns task 2; values left of zero
+  indicate forgetting. Rank placement changes retention, but the direction
+  and magnitude depend on task order.}
   \label{fig:teaser}
 \end{figure*}
 
@@ -171,6 +177,16 @@ effects as stable layer preferences.
 
 \section{Protocol and Reproducibility}
 \label{app:protocol}
+
+\paragraph{Meaning of each stage.}
+The stage index denotes progress through sequential training, not model depth.
+At stage 0, the unadapted starting checkpoint is evaluated on both benchmarks.
+At stage 1, one LoRA adapter has been trained only on the first task in the
+declared order, saved, and evaluated on both benchmarks. At stage 2, the same
+adapter weights are loaded as trainable parameters, updated on the second
+task, saved again, and evaluated on both benchmarks. Thus $S_1^1-S_1^0$
+measures first-task benchmark acquisition, whereas $S_1^2-S_1^1$ measures the
+change attributable to subsequently training task 2.
 
 \paragraph{Model and optimization.}
 We use \texttt{Qwen/Qwen3-4B-Instruct-2507} at revision
@@ -233,9 +249,11 @@ minutes for the two training stages, excluding generation-based evaluation.
   \centering
   \small
   \caption{All benchmark scores (0--100). I and M denote instruction and
-  mathematics. $\mathrm{BWT}_1=S_1^2-S_1^1$; positive values indicate that
-  training task 2 improved the first-task benchmark. Boldface is intentionally
-  omitted because the best endpoint depends on the comparison of interest.}
+  mathematics; S1 is the evaluation after training the first task, and S2 is
+  the evaluation after continuing the same adapter on the second task.
+  $\mathrm{BWT}_1=S_1^2-S_1^1$; positive values indicate that task-2 training
+  improved the first-task benchmark. Boldface is intentionally omitted because
+  the best endpoint depends on the comparison of interest.}
   \label{tab:all-results}
   \resizebox{\textwidth}{!}{\input{generated/stage_results_table.tex}}
 \end{table*}
@@ -243,9 +261,11 @@ minutes for the two training stages, excluding generation-based evaluation.
 \begin{figure*}[t]
   \centering
   \includegraphics[width=0.88\textwidth]{stage_trajectories.pdf}
-  \caption{Absolute benchmark trajectories. Stage 1 follows the first task in
-  the named order; stage 2 follows the second. Axes are independently focused
-  within panels, so numerical comparisons should use Table~\ref{tab:all-results}.}
+  \caption{Absolute benchmark trajectories. S0 is the unadapted checkpoint;
+  S1 follows training on the first task in the named order; S2 follows
+  continued training of the same adapter on the second task. Axes are
+  independently focused within panels, so numerical comparisons should use
+  Table~\ref{tab:all-results}.}
   \label{fig:trajectories}
 \end{figure*}
 
@@ -288,39 +308,6 @@ vertical slice rather than introducing artificial jitter.
 
 \FloatBarrier
 
-\section{Spectral Pilot and Automatic Allocation}
-\label{app:spectral}
-
-The separate pilot trains uniform rank 32 on an alternating, equal-token mix
-of the two decontaminated training sets. For $B=Q_BR_B$ and
-$A^\top=Q_AR_A$, the nonzero singular values of $BA$ equal those of the small
-matrix $R_BR_A^\top$. Tests against an explicit SVD verify this identity. We
-average normalized cumulative energy from \texttt{q\_proj} and
-\texttt{v\_proj} within each block, then allocate increments from
-$\{4,8,\ldots,32\}$ by marginal energy under Equation~\ref{eq:budget}.
-
-The pilot produces the exact-budget vector
-\begin{multline*}
-(24,20,20,20,24,24,20,16,16,16,12,12,\\
-16,16,12,12,12,12,12,12,12,12,12,16,\\
-16,16,16,20,16,16,16,20,16,16,16,12).
-\end{multline*}
-It is non-uniform without a forced tie-break and contains exactly
-\NumLoraParameters{} parameters. Its final two-order sequential evaluation
-was not completed, so it is excluded from every comparative claim in the main
-paper. The pilot adapter is never reused for final training.
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics[width=0.84\textwidth]{spectral_pilot.pdf}
-  \caption{Pilot-only spectral allocation (left) and cumulative energy of the
-  factorized updates (right). Thin curves are block-wise averages over the two
-  target modules; the thick curve is their median.}
-  \label{fig:spectral}
-\end{figure*}
-
-\FloatBarrier
-
 \section{Limitations and Next Experiments}
 The sweep has one training seed. Full-benchmark evaluation removes sampling
 noise from prompt subsampling, but not optimization variance; standard
@@ -335,12 +322,12 @@ not divisible by four, the standard DDP sampler pads each epoch by one
 sequence; this exposure is identical across allocations but means physical
 token presentations slightly exceed the unique prepared-token budget.
 
-The next decisive experiment is three seeds for uniform, middle-heavy (the
-benchmark-free selected manual candidate), and the spectral allocation in
-both orders. A higher-precision control would test whether the observed
-external-benchmark degradation is specific to quantized adaptation. Longer
-task sequences and the \texttt{q/k/v/o} ablation would then test whether the
-order-dependent pattern generalizes beyond the present setting.
+The next decisive experiment is three seeds for the uniform reference and the
+three depth-heavy allocations in both orders. A higher-precision control would
+test whether the observed external-benchmark degradation is specific to
+quantized adaptation. Longer task sequences and the \texttt{q/k/v/o} ablation
+would then test whether the order-dependent pattern generalizes beyond the
+present setting.
 
 \section{Artifact Generation}
 From the repository root, the audited paper snapshot and all vector figures

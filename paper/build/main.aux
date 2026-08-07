@@ -25,7 +25,7 @@
 \citation{zhou2023ifeval,cobbe2021gsm8k}
 \HyPL@Entry{0<</S/D>>}
 \newlabel{eq:budget}{{1}{1}{}{equation.2.1}{}}
-\newlabel{fig:teaser}{{1}{2}{Fixed-budget allocations and their sequential behavior (seed 42). \textbf {(a)} Rank by depth; each pattern has \NumLoraParameters {} parameters. \textbf {(b)} Task-1 score immediately after learning it, relative to the unadapted checkpoint. \textbf {(c)} Task-1 backward transfer after task 2; values left of zero indicate forgetting. Rank placement changes retention, but the direction and magnitude depend on task order}{figure.1}{}}
+\newlabel{fig:teaser}{{1}{2}{Fixed-budget allocations and their sequential behavior (seed 42). \textbf {(a)} Rank by depth; each pattern has \NumLoraParameters {} parameters. \textbf {(b)} Task-1 score at stage 1---immediately after learning the first task---relative to stage 0. \textbf {(c)} Change in the first-task score from stage 1 to stage 2, after the same adapter learns task 2; values left of zero indicate forgetting. Rank placement changes retention, but the direction and magnitude depend on task order}{figure.1}{}}
 \bibdata{references}
 \bibcite{argillaifevallike}{{1}{2024}{{Argilla}}{{}}}
 \bibcite{cobbe2021gsm8k}{{2}{2021}{{Cobbe et~al.}}{{Cobbe, Kosaraju, Bavarian, Chen, Jun, Kaiser, Plappert, Tworek, Hilton, Nakano, Hesse, and Schulman}}}
@@ -44,12 +44,10 @@
 \newlabel{app:protocol}{{A}{4}{}{appendix.A}{}}
 \newlabel{tab:ranks}{{1}{4}{Manual rank patterns. Early, middle, and late each contain 12 blocks. Exact parameter equality follows from identical projection shapes}{table.1}{}}
 \newlabel{app:results}{{B}{4}{}{appendix.B}{}}
-\newlabel{tab:all-results}{{2}{5}{All benchmark scores (0--100). I and M denote instruction and mathematics. $\mathrm {BWT}_1=S_1^2-S_1^1$; positive values indicate that training task 2 improved the first-task benchmark. Boldface is intentionally omitted because the best endpoint depends on the comparison of interest}{table.2}{}}
-\newlabel{fig:trajectories}{{2}{5}{Absolute benchmark trajectories. Stage 1 follows the first task in the named order; stage 2 follows the second. Axes are independently focused within panels, so numerical comparisons should use Table~\ref {tab:all-results}}{figure.2}{}}
+\newlabel{tab:all-results}{{2}{5}{All benchmark scores (0--100). I and M denote instruction and mathematics; S1 is the evaluation after training the first task, and S2 is the evaluation after continuing the same adapter on the second task. $\mathrm {BWT}_1=S_1^2-S_1^1$; positive values indicate that task-2 training improved the first-task benchmark. Boldface is intentionally omitted because the best endpoint depends on the comparison of interest}{table.2}{}}
+\newlabel{fig:trajectories}{{2}{5}{Absolute benchmark trajectories. S0 is the unadapted checkpoint; S1 follows training on the first task in the named order; S2 follows continued training of the same adapter on the second task. Axes are independently focused within panels, so numerical comparisons should use Table~\ref {tab:all-results}}{figure.2}{}}
 \newlabel{fig:bwt}{{3}{6}{\textbf {Left:} first-task backward transfer. Instruction-following retention is more rank-sensitive when mathematics is learned second; math-first interference is small and sometimes positive. \textbf {Right:} final score minus the unadapted checkpoint; middle-heavy IFEval$\rightarrow $Math GSM8K is the only positive cell}{figure.3}{}}
 \newlabel{fig:net}{{3}{6}{\textbf {Left:} first-task backward transfer. Instruction-following retention is more rank-sensitive when mathematics is learned second; math-first interference is small and sometimes positive. \textbf {Right:} final score minus the unadapted checkpoint; middle-heavy IFEval$\rightarrow $Math GSM8K is the only positive cell}{figure.3}{}}
 \newlabel{fig:calibration-gap}{{4}{6}{\textbf {Left:} every adapter improves assistant-token NLL on the decontaminated, training-derived calibration splits, while mean external benchmark net performance is negative; the panels use distinct units. \textbf {Right:} mean final net score at the common 5.898M-parameter budget; every point has the same true horizontal coordinate}{figure.4}{}}
 \newlabel{fig:parameters}{{4}{6}{\textbf {Left:} every adapter improves assistant-token NLL on the decontaminated, training-derived calibration splits, while mean external benchmark net performance is negative; the panels use distinct units. \textbf {Right:} mean final net score at the common 5.898M-parameter budget; every point has the same true horizontal coordinate}{figure.4}{}}
-\newlabel{app:spectral}{{C}{7}{}{appendix.C}{}}
-\newlabel{fig:spectral}{{5}{8}{Pilot-only spectral allocation (left) and cumulative energy of the factorized updates (right). Thin curves are block-wise averages over the two target modules; the thick curve is their median}{figure.5}{}}
-\gdef \@abspage@last{8}
+\gdef \@abspage@last{7}

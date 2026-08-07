@@ -326,7 +326,7 @@ def plot_rank_by_depth(rank_vectors: dict[str, list[int]], output: Path) -> None
 
 def plot_stage_trajectories(protocols: pd.DataFrame, output: Path) -> None:
     fig, axes = plt.subplots(2, 2, figsize=(7.0, 5.0), sharex=True, constrained_layout=True)
-    stages = ("Base", "Stage 1", "Stage 2")
+    stages = ("Base\n(S0)", "After task 1\n(S1)", "After task 2\n(S2)")
     for row_index, order in enumerate(("ifeval_to_math", "math_to_ifeval")):
         for column_index, benchmark in enumerate(("ifeval", "gsm8k")):
             axis = axes[row_index, column_index]
@@ -372,7 +372,7 @@ def plot_first_task_interference(protocols: pd.DataFrame, output: Path) -> None:
         axis.barh([DISPLAY_NAMES[name] for name in MANUAL_CONFIGS], values)
         axis.axvline(0, color="0.25", linewidth=0.8)
         axis.set_title(title)
-        axis.set_xlabel("BWT (stage 2 − stage 1, points)")
+        axis.set_xlabel("BWT (after task 2 − after task 1, points)")
         axis.grid(axis="x", linewidth=0.45, alpha=0.35)
         for index, value in enumerate(values):
             horizontal_alignment = "left" if value < 0 else "right"
@@ -405,7 +405,7 @@ def plot_final_net_heatmap(protocols: pd.DataFrame, output: Path) -> None:
     fig, axis = plt.subplots(figsize=(4.7, 4.0), constrained_layout=True)
     image = axis.imshow(matrix, aspect="auto", vmin=-6.0, vmax=1.0)
     axis.set(
-        title="Final performance relative to the unadapted checkpoint",
+        title="Final performance after task 2 relative to the unadapted checkpoint",
         xticks=(0, 1),
         xticklabels=("IFEval", "GSM8K"),
         yticks=np.arange(len(labels)),
@@ -425,7 +425,7 @@ def plot_final_net_heatmap(protocols: pd.DataFrame, output: Path) -> None:
                 color=text_color,
             )
     colorbar = fig.colorbar(image, ax=axis, fraction=0.05, pad=0.03)
-    colorbar.set_label("Stage-2 minus base (points)")
+    colorbar.set_label("After task 2 minus base (points)")
     _save_figure(fig, output)
 
 
@@ -493,53 +493,6 @@ def plot_performance_vs_parameters(protocols: pd.DataFrame, output: Path) -> Non
     axis.set_xticks((float(protocols.lora_parameters.iloc[0]) / 1e6,))
     axis.grid(linewidth=0.45, alpha=0.35)
     _save_figure(fig, output)
-
-
-def _spectral_block_curves(spectral: dict[str, Any]) -> np.ndarray:
-    by_block: dict[int, list[np.ndarray]] = {}
-    for module_name, values in spectral.items():
-        block = int(module_name.split(".layers.", 1)[1].split(".", 1)[0])
-        by_block.setdefault(block, []).append(np.asarray(values["cumulative_energy"], dtype=float))
-    return np.stack([np.mean(by_block[block], axis=0) for block in sorted(by_block)])
-
-
-def plot_spectral_pilot(
-    spectral_analysis_path: Path,
-    rank_allocation_path: Path,
-    output: Path,
-) -> dict[str, Any]:
-    spectral = json.loads(spectral_analysis_path.read_text(encoding="utf-8"))
-    allocation = json.loads(rank_allocation_path.read_text(encoding="utf-8"))
-    curves = _spectral_block_curves(spectral)
-    retained_rank = np.arange(1, curves.shape[1] + 1)
-    ranks = {int(block): int(rank) for block, rank in allocation["block_ranks"].items()}
-
-    fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.9), constrained_layout=True)
-    axes[0].step(range(36), [ranks[block] for block in range(36)], where="mid", linewidth=1.7)
-    axes[0].set(
-        title="Allocated rank after the discarded pilot",
-        xlabel="Transformer block",
-        ylabel="Allocated rank",
-        xlim=(-0.5, 35.5),
-        ylim=(2, 34),
-    )
-    axes[0].set_yticks((4, 8, 12, 16, 20, 24, 28, 32))
-    for curve in curves:
-        axes[1].plot(retained_rank, curve, linewidth=0.55, alpha=0.22)
-    median = np.median(curves, axis=0)
-    axes[1].plot(retained_rank, median, linewidth=1.8, label="Median block")
-    axes[1].set(
-        title="Factorized update energy",
-        xlabel="Retained rank",
-        ylabel="Cumulative spectral energy",
-        xlim=(1, 32),
-        ylim=(0, 1.02),
-    )
-    axes[1].legend(frameon=False)
-    for axis in axes:
-        axis.grid(linewidth=0.45, alpha=0.35)
-    _save_figure(fig, output)
-    return allocation
 
 
 def _tex_name(configuration: str) -> str:
@@ -673,20 +626,12 @@ def build_first_paper_artifacts(
     )
     plot_performance_vs_parameters(protocols, figures_dir / "performance_vs_parameters")
 
-    spectral_root = results_root / "spectral" / "full" / config.data_fingerprint()
-    spectral_analysis = spectral_root / "spectral_analysis.json"
-    rank_allocation = spectral_root / "rank_allocation.json"
-    spectral_summary: dict[str, Any] | None = None
-    if spectral_analysis.exists() and rank_allocation.exists():
-        spectral_summary = plot_spectral_pilot(
-            spectral_analysis,
-            rank_allocation,
-            figures_dir / "spectral_pilot",
-        )
-
     utility_means = protocols.groupby("configuration").utility.mean().to_dict()
     snapshot = {
-        "scope": "manual allocations, both task orders, seed 42",
+        "scope": (
+            "three depth-heavy allocations plus the uniform reference, "
+            "both task orders, seed 42"
+        ),
         "validated_protocols": len(protocols),
         "evaluation_examples_per_checkpoint": EXPECTED_EVAL_ROWS,
         "model": config.model.name,
@@ -708,16 +653,11 @@ def build_first_paper_artifacts(
         "benchmark_mean_utility_by_configuration": utility_means,
         "manual_selection": selection,
         "decontamination": decontamination,
-        "spectral_pilot": {
-            "status": "allocation produced; final sequential evaluation excluded",
-            "allocation": spectral_summary,
-        },
         "limitations": [
             "one training seed",
             "two task families",
             "4-bit NF4 backbone without a higher-precision control",
             "DDP sampler padding repeats one packed sequence per task and epoch",
-            "spectral allocation lacks a completed final sequential evaluation",
         ],
     }
     (data_dir / "study_snapshot.json").write_text(

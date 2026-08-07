@@ -216,8 +216,7 @@ files are already included under `paper/`; `scripts/repair_latex_template.py`
 only audits or reconstructs them from the original scrambled bundle. The
 first-paper builder rejects a missing manual protocol, partial benchmark,
 unequal parameter budget, stale configuration, or unexpected token budget.
-It labels the single-seed scope and excludes the unevaluated spectral adapter
-from comparative claims.
+It labels the single-seed scope and reports only the completed manual sweep.
 
 The original `scripts/build_paper.py` remains the stricter builder for the
 pre-registered complete matrix. It refuses to emit result macros until the
