@@ -138,6 +138,18 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 uv run accelerate launch --num_processes 4 \
   --seeds 7 42 123
 ```
 
+The entire initial matrix, calibration-only selection, confirmatory matrix,
+analysis, and guarded paper build can also be run as one resumable command:
+
+```bash
+CUDA_VISIBLE_DEVICES=0,1,2,3 uv run python scripts/run_full_study.py \
+  --num_processes 4
+```
+
+Its current step is written to `results/full_study_state.json`. Every nested
+training command retains the same checkpoint- and evaluation-level resumption
+semantics described above.
+
 All scripts are idempotent. A completed stage has `stage_complete.json`;
 interrupted Trainer stages resume from the latest `checkpoint-*`. Stage 2
 loads the saved stage-1 adapter with `is_trainable=True` and resets optimizer
@@ -199,4 +211,3 @@ The complete matrix processes tens of millions of supervised tokens and many
 benchmark generations. It can take multiple days even on four GPUs. The
 pipeline measures whether rank location matters; it does not assume that a
 non-uniform allocation will win.
-
