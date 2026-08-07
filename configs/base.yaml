@@ -1,0 +1,96 @@
+schema_version: 1
+model:
+  name: Qwen/Qwen3-4B-Instruct-2507
+  revision: cdbee75f17c01a7cc42f958dc650907174af0554
+  trust_remote_code: false
+  load_in_4bit: true
+  quant_type: nf4
+  double_quant: true
+  compute_dtype: bfloat16
+  attention_backend: sdpa
+  gradient_checkpointing: true
+  reference_parameter_count: 4022468608
+data:
+  ifeval_train:
+    name: argilla/ifeval-like-data
+    revision: 56505d1771e36fa5aa07aa9a1b39008fe60a8487
+    config: filtered
+    split: train
+  numina_train:
+    name: AI-MO/NuminaMath-CoT
+    revision: 9d8d210c9f6a36c8f3cd84045668c9b7800ef517
+    config: default
+    split: train
+  ifeval_eval:
+    name: google/IFEval
+    revision: 966cd89545d6b6acfd7638bc708b98261ca58e84
+    config: default
+    split: train
+  gsm8k_train:
+    name: openai/gsm8k
+    revision: 740312add88f781978c0658806c59bc2815b9866
+    config: main
+    split: train
+  gsm8k_eval:
+    name: openai/gsm8k
+    revision: 740312add88f781978c0658806c59bc2815b9866
+    config: main
+    split: test
+  processed_dir: data/processed
+  num_proc: 8
+  preparation_limit_per_task: null
+decontamination:
+  approximate_threshold: 0.90
+  candidate_threshold: 0.75
+  num_perm: 64
+  char_ngram_size: 5
+  remove_internal_duplicates: true
+training:
+  train_token_budget_per_task: 1000000
+  calibration_token_budget_per_task: 50000
+  max_sequence_length: 2048
+  effective_batch_size: 16
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: auto
+  learning_rate: 0.0002
+  num_train_epochs: 1.0
+  max_steps: -1
+  warmup_ratio: 0.03
+  weight_decay: 0.0
+  lr_scheduler_type: cosine
+  optimizer: paged_adamw_8bit
+  seed: 42
+  packing: true
+  save_steps: 25
+  logging_steps: 1
+  reset_optimizer_between_tasks: true
+  resume: true
+lora:
+  target_modules: [q_proj, v_proj]
+  strategy: uniform
+  uniform_rank: 16
+  low_rank: 8
+  high_rank: 32
+  dropout: 0.05
+  budget_tolerance: 0.01
+  random_seed: 42
+evaluation:
+  engine: local_lm_eval_verifiers
+  batch_size: 4
+  ifeval_max_new_tokens: 1280
+  gsm8k_max_new_tokens: 512
+  limit: null
+  temperature: 0.0
+  do_sample: false
+spectral:
+  pilot_rank: 32
+  r_min: 4
+  r_max: 32
+  rank_step: 4
+  baseline_rank: 16
+  require_non_uniform: true
+output:
+  results_dir: results
+  checkpoints_dir: checkpoints
+  run_name: null
+utility_lambda: 1.0

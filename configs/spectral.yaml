@@ -1,0 +1,5 @@
+extends: base.yaml
+lora:
+  strategy: spectral
+  rank_file: results/spectral/rank_allocation.json
+

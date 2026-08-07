@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "low-rank-eval-catastrophic-forgetting"
+version = "0.1.0"
+description = "Reproducible QLoRA experiments for layer-wise rank allocation and catastrophic forgetting."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Matheus Costa Monteiro" }]
+dependencies = [
+  "accelerate==1.14.0",
+  "bitsandbytes==0.50.0",
+  "datasets==5.0.1",
+  "datasketch>=1.6.5,<2",
+  "immutabledict==4.3.1",
+  "langdetect==1.0.9",
+  "lm-eval==0.4.12",
+  "matplotlib>=3.10,<4",
+  "numpy>=2.2,<3",
+  "pandas==3.0.5",
+  "peft==0.20.0",
+  "pydantic>=2.12,<3",
+  "python-dotenv>=1.1,<2",
+  "pyyaml==6.0.3",
+  "rapidfuzz==3.14.5",
+  "safetensors==0.8.0",
+  "scipy>=1.15,<2",
+  "seaborn==0.13.2",
+  "torch==2.13.0",
+  "tqdm>=4.67,<5",
+  "transformers==5.14.1",
+  "trl==1.9.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.1.1",
+  "pytest-cov>=6,<8",
+  "ruff>=0.12,<1",
+]
+flash = ["flash-attn>=2.8,<3"]
+
+[project.scripts]
+rank-lora-prepare = "low_rank_eval.cli:prepare_data_main"
+rank-lora-run = "low_rank_eval.cli:run_sequential_main"
+rank-lora-analyze = "low_rank_eval.cli:analyze_results_main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/low_rank_eval"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

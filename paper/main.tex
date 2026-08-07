@@ -1,0 +1,146 @@
+\documentclass{article}
+
+\usepackage[accepted]{icml2024}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+\icmltitlerunning{Layer-wise LoRA Ranks and Catastrophic Forgetting}
+
+\InputIfFileExists{generated/results.tex}{}{
+  \PackageError{rank-lora-paper}
+  {Missing generated/results.tex}
+  {Run the complete experiment matrix and then python scripts/build_paper.py.}
+}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Do Transformer Layers Prefer Different LoRA Ranks?\\
+A Controlled Study of Sequential Fine-Tuning and Forgetting}
+
+\begin{icmlauthorlist}
+\icmlauthor{Matheus Costa Monteiro}{independent}
+\end{icmlauthorlist}
+\icmlaffiliation{independent}{Independent Researcher}
+\icmlcorrespondingauthor{Matheus Costa Monteiro}{matheuscostamonteiro.mc@gmail.com}
+\vskip 0.3in
+]
+
+\begin{abstract}
+Low-rank adaptation usually assigns the same rank to every adapted Transformer
+layer, although layer depth may induce different capacity requirements. We
+study whether reallocating a fixed LoRA parameter budget across depth changes
+both task acquisition and catastrophic forgetting. QLoRA adapters on
+Qwen3-4B-Instruct are trained sequentially on instruction following and
+mathematical reasoning in both task orders. Uniform, early-heavy, middle-heavy,
+late-heavy, and data-driven spectral allocations are compared at equal
+parameter count. \GeneratedAbstractResult
+\end{abstract}
+
+\section{Introduction}
+LoRA freezes pretrained weights and represents each adapted linear update as
+$\Delta W_\ell=B_\ell A_\ell$, where rank $r_\ell$ controls trainable capacity
+\citep{hu2022lora}. A uniform $r_\ell$ is convenient but need not be optimal:
+early, intermediate, and late Transformer blocks play different computational
+roles. Adaptive methods such as AdaLoRA and dEBORA allocate capacity across
+modules \citep{zhang2023adalora,zangrando2025debora}, but their interaction
+with sequential learning remains underexplored.
+
+We isolate allocation from parameter count and scaling. Every experiment adapts
+only \texttt{q\_proj} and \texttt{v\_proj}, uses conventional LoRA with
+$\alpha_\ell=r_\ell$, and matches the rank-16 budget within one percent. We ask
+(i) whether the location of rank affects acquisition and retention, (ii)
+whether the effect depends on task order, and (iii) whether a low-cost spectral
+pilot improves on uniform ranks.
+
+\section{Experimental protocol}
+\paragraph{Tasks and contamination control.}
+Instruction following is trained on the filtered IFEval-like corpus and
+evaluated on the official IFEval benchmark using prompt-level strict accuracy
+\citep{zhou2023ifeval}. Mathematical reasoning is trained on NuminaMath-CoT
+\citep{li2024numinamath} and evaluated by numerical exact match on GSM8K
+\citep{cobbe2021gsm8k}. Before splitting, benchmark-source rows, normalized
+exact hashes, and approximate character-$5$-gram matches above 0.90 are
+removed. Training and calibration are disjoint and contain no evaluation
+prompts. Each task contributes exactly one million supervised assistant tokens.
+
+\paragraph{Sequential QLoRA.}
+We use NF4 4-bit QLoRA \citep{dettmers2023qlora}, BF16 computation, gradient
+checkpointing, a learning rate of $2{\times}10^{-4}$, and an effective batch
+size of 16. The same adapter is trained on task 1, saved, reloaded, and
+continued on task 2; optimizer and scheduler are reset between tasks. Both
+orders are evaluated at the base, stage-1, and stage-2 checkpoints.
+
+\paragraph{Rank allocations.}
+The 36 blocks are partitioned into 12 early, 12 middle, and 12 late blocks.
+Uniform ranks are $(16,16,16)$; the three manual allocations are permutations
+of $(32,8,8)$. All contain \NumLoraParameters trainable LoRA parameters.
+The spectral pilot trains rank 32 on an equal-token task mixture. Singular
+values of $BA$ are computed from QR factorizations of $B$ and $A^\top$ and an
+SVD of the resulting $32{\times}32$ matrix. Marginal spectral energy then
+allocates ranks from $\{4,8,\ldots,32\}$ under the same budget.
+
+\section{Results}
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{../results/figures/performance_by_stage.pdf}
+  \caption{Benchmark performance at the base, stage-1, and stage-2 checkpoints.
+  All values are on a 0--100 scale.}
+  \label{fig:stages}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{../results/figures/forgetting_by_configuration.pdf}
+  \caption{Forgetting by rank allocation and benchmark. Lower is better.}
+  \label{fig:forgetting}
+\end{figure}
+
+We define forgetting as the best observed score minus the final score, backward
+transfer as final minus immediate post-learning performance, and net gain as
+final minus base. Figure~\ref{fig:stages} exposes acquisition and retention
+without mixing IFEval and GSM8K into a single headline metric.
+\GeneratedMainResult
+
+The manual allocation promoted to three seeds was selected only through
+assistant-token negative log-likelihood on decontaminated calibration data.
+The selected configuration was \SelectedManualConfig; neither IFEval nor GSM8K
+participated in that decision. \GeneratedOrderResult
+
+\section{Conclusion}
+\GeneratedConclusion
+These findings characterize a budget-allocation effect rather than proving
+that non-uniform ranks are universally superior. Future work should test more
+task families, model scales, and longer task sequences.
+
+\clearpage
+\bibliography{references}
+\bibliographystyle{icml2024}
+
+\appendix
+\section{Reproducibility details}
+The released pipeline pins model and dataset revisions, stores the complete
+rank pattern, logs parameters and peak memory per GPU, saves all generations,
+and supports resumption at each training stage. Scores are generated greedily
+with temperature zero. The initial sweep uses seed 42; uniform, the selected
+manual allocation, and the spectral allocation use seeds 7, 42, and 123.
+
+\section{Additional diagnostics}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=.8\textwidth]{../results/figures/rank_by_depth.pdf}
+  \caption{Applied rank as a function of Transformer depth.}
+\end{figure}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=.8\textwidth]{../results/figures/spectral_energy_curves.pdf}
+  \caption{Cumulative spectral-energy curves from the discarded pilot adapter.}
+\end{figure}
+
+\end{document}
+

@@ -1,0 +1,16 @@
+extends: uniform.yaml
+data:
+  num_proc: 2
+  preparation_limit_per_task: 5000
+training:
+  train_token_budget_per_task: 20000
+  calibration_token_budget_per_task: 2000
+  max_sequence_length: 512
+  effective_batch_size: 4
+  save_steps: 5
+evaluation:
+  ifeval_max_new_tokens: 256
+  gsm8k_max_new_tokens: 256
+  limit: 8
+output:
+  run_name: smoke
