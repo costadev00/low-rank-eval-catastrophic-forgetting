@@ -19,18 +19,3 @@ htmlcov/
 
 TemplatePaperLatex/
 ICLR-2025-debora-efficient-bilevel-optimization-based-low-rank-adaptation-Paper-Conference*.pdf
-
-paper/build/
-paper/generated/*
-!paper/generated/.gitkeep
-!paper/generated/results.tex
-!paper/generated/rank_table.tex
-!paper/generated/stage_results_table.tex
-*.aux
-*.bbl
-*.blg
-*.fdb_latexmk
-*.fls
-*.log
-*.out
-*.synctex.gz

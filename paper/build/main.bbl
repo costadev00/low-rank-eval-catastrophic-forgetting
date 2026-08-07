@@ -1,0 +1,96 @@
+\begin{thebibliography}{11}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[{Argilla}(2024)]{argillaifevallike}
+{Argilla}.
+\newblock {IFEval}-like-data, filtered configuration.
+\newblock Hugging Face dataset repository, 2024.
+\newblock URL \url{https://huggingface.co/datasets/argilla/ifeval-like-data}.
+\newblock Revision 56505d1771e36fa5aa07aa9a1b39008fe60a8487.
+
+\bibitem[Cobbe et~al.(2021)Cobbe, Kosaraju, Bavarian, Chen, Jun, Kaiser,
+  Plappert, Tworek, Hilton, Nakano, Hesse, and Schulman]{cobbe2021gsm8k}
+Cobbe, K., Kosaraju, V., Bavarian, M., Chen, M., Jun, H., Kaiser, L., Plappert,
+  M., Tworek, J., Hilton, J., Nakano, R., Hesse, C., and Schulman, J.
+\newblock Training verifiers to solve math word problems.
+\newblock \emph{arXiv preprint arXiv:2110.14168}, 2021.
+\newblock URL \url{https://arxiv.org/abs/2110.14168}.
+
+\bibitem[Dettmers et~al.(2023)Dettmers, Pagnoni, Holtzman, and
+  Zettlemoyer]{dettmers2023qlora}
+Dettmers, T., Pagnoni, A., Holtzman, A., and Zettlemoyer, L.
+\newblock {QLoRA}: Efficient finetuning of quantized {LLMs}.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~36, 2023.
+\newblock URL
+  \url{https://proceedings.neurips.cc/paper_files/paper/2023/hash/1feb87871436031bdc0f2beaa62a049b-Abstract-Conference.html}.
+
+\bibitem[Hu et~al.(2022)Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang, and
+  Chen]{hu2022lora}
+Hu, E.~J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang, L., and
+  Chen, W.
+\newblock {LoRA}: Low-rank adaptation of large language models.
+\newblock In \emph{International Conference on Learning Representations}, 2022.
+\newblock URL \url{https://openreview.net/forum?id=nZeVKeeFYf9}.
+
+\bibitem[Li et~al.(2024)Li, Beeching, Tunstall, Lipkin, Soletskyi, Huang,
+  Rasul, Yu, Jiang, Shen, Qin, Dong, Zhou, Fleureau, Lample, and
+  Polu]{li2024numinamath}
+Li, J., Beeching, E., Tunstall, L., Lipkin, B., Soletskyi, R., Huang, S.~C.,
+  Rasul, K., Yu, L., Jiang, A., Shen, Z., Qin, Z., Dong, B., Zhou, L.,
+  Fleureau, Y., Lample, G., and Polu, S.
+\newblock {NuminaMath}: The largest public dataset in {AI4Maths} with 860k
+  pairs of competition math problems and solutions.
+\newblock Hugging Face dataset repository, 2024.
+\newblock URL \url{https://huggingface.co/datasets/AI-MO/NuminaMath-CoT}.
+
+\bibitem[Lopez-Paz \& Ranzato(2017)Lopez-Paz and Ranzato]{lopezpaz2017gem}
+Lopez-Paz, D. and Ranzato, M.
+\newblock Gradient episodic memory for continual learning.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~30, 2017.
+\newblock URL
+  \url{https://proceedings.neurips.cc/paper/2017/hash/f87522788a2be2d171666752f97ddebb-Abstract.html}.
+
+\bibitem[McCloskey \& Cohen(1989)McCloskey and
+  Cohen]{mccloskey1989catastrophic}
+McCloskey, M. and Cohen, N.~J.
+\newblock Catastrophic interference in connectionist networks: The sequential
+  learning problem.
+\newblock In Bower, G.~H. (ed.), \emph{Psychology of Learning and Motivation},
+  volume~24, pp.\  109--165. Academic Press, 1989.
+\newblock \doi{10.1016/S0079-7421(08)60536-8}.
+
+\bibitem[{Qwen Team}(2025)]{qwen3report}
+{Qwen Team}.
+\newblock {Qwen3} technical report.
+\newblock \emph{arXiv preprint arXiv:2505.09388}, 2025.
+\newblock URL \url{https://arxiv.org/abs/2505.09388}.
+
+\bibitem[Zangrando et~al.(2025)Zangrando, Venturini, Rinaldi, and
+  Tudisco]{zangrando2025debora}
+Zangrando, E., Venturini, S., Rinaldi, F., and Tudisco, F.
+\newblock {dEBORA}: Efficient bilevel optimization-based low-rank adaptation.
+\newblock In \emph{International Conference on Learning Representations}, 2025.
+\newblock URL \url{https://openreview.net/forum?id=5M0ic2RxQZ}.
+
+\bibitem[Zhang et~al.(2023)Zhang, Chen, Bukharin, He, Cheng, Chen, and
+  Zhao]{zhang2023adalora}
+Zhang, Q., Chen, M., Bukharin, A., He, P., Cheng, Y., Chen, W., and Zhao, T.
+\newblock Adaptive budget allocation for parameter-efficient fine-tuning.
+\newblock In \emph{International Conference on Learning Representations}, 2023.
+\newblock URL \url{https://openreview.net/forum?id=lq62uWRJjiY}.
+
+\bibitem[Zhou et~al.(2023)Zhou, Lu, Mishra, Brahma, Basu, Luan, Zhou, and
+  Hou]{zhou2023ifeval}
+Zhou, J., Lu, T., Mishra, S., Brahma, S., Basu, S., Luan, Y., Zhou, D., and
+  Hou, L.
+\newblock Instruction-following evaluation for large language models.
+\newblock \emph{arXiv preprint arXiv:2311.07911}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2311.07911}.
+
+\end{thebibliography}

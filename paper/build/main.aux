@@ -1,0 +1,55 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldcontentsline\contentsline
+\gdef\contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\contentsline\oldcontentsline
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand*\HyPL@Entry[1]{}
+\citation{mccloskey1989catastrophic}
+\citation{hu2022lora}
+\citation{dettmers2023qlora}
+\citation{zhang2023adalora}
+\citation{zangrando2025debora}
+\citation{lopezpaz2017gem}
+\citation{qwen3report}
+\citation{zhou2023ifeval,cobbe2021gsm8k}
+\HyPL@Entry{0<</S/D>>}
+\newlabel{eq:budget}{{1}{1}{}{equation.2.1}{}}
+\newlabel{fig:teaser}{{1}{2}{Fixed-budget allocations and their sequential behavior (seed 42). \textbf {(a)} Rank by depth; each pattern has \NumLoraParameters {} parameters. \textbf {(b)} Task-1 score immediately after learning it, relative to the unadapted checkpoint. \textbf {(c)} Task-1 backward transfer after task 2; values left of zero indicate forgetting. Rank placement changes retention, but the direction and magnitude depend on task order}{figure.1}{}}
+\bibdata{references}
+\bibcite{argillaifevallike}{{1}{2024}{{Argilla}}{{}}}
+\bibcite{cobbe2021gsm8k}{{2}{2021}{{Cobbe et~al.}}{{Cobbe, Kosaraju, Bavarian, Chen, Jun, Kaiser, Plappert, Tworek, Hilton, Nakano, Hesse, and Schulman}}}
+\bibcite{dettmers2023qlora}{{3}{2023}{{Dettmers et~al.}}{{Dettmers, Pagnoni, Holtzman, and Zettlemoyer}}}
+\bibcite{hu2022lora}{{4}{2022}{{Hu et~al.}}{{Hu, Shen, Wallis, Allen-Zhu, Li, Wang, Wang, and Chen}}}
+\bibcite{li2024numinamath}{{5}{2024}{{Li et~al.}}{{Li, Beeching, Tunstall, Lipkin, Soletskyi, Huang, Rasul, Yu, Jiang, Shen, Qin, Dong, Zhou, Fleureau, Lample, and Polu}}}
+\bibcite{lopezpaz2017gem}{{6}{2017}{{Lopez-Paz \& Ranzato}}{{Lopez-Paz and Ranzato}}}
+\bibcite{mccloskey1989catastrophic}{{7}{1989}{{McCloskey \& Cohen}}{{McCloskey and Cohen}}}
+\bibcite{qwen3report}{{8}{2025}{{Qwen Team}}{{}}}
+\bibcite{zangrando2025debora}{{9}{2025}{{Zangrando et~al.}}{{Zangrando, Venturini, Rinaldi, and Tudisco}}}
+\bibcite{zhang2023adalora}{{10}{2023}{{Zhang et~al.}}{{Zhang, Chen, Bukharin, He, Cheng, Chen, and Zhao}}}
+\bibcite{zhou2023ifeval}{{11}{2023}{{Zhou et~al.}}{{Zhou, Lu, Mishra, Brahma, Basu, Luan, Zhou, and Hou}}}
+\bibstyle{icml2024}
+\citation{argillaifevallike}
+\citation{li2024numinamath}
+\newlabel{app:protocol}{{A}{4}{}{appendix.A}{}}
+\newlabel{tab:ranks}{{1}{4}{Manual rank patterns. Early, middle, and late each contain 12 blocks. Exact parameter equality follows from identical projection shapes}{table.1}{}}
+\newlabel{app:results}{{B}{4}{}{appendix.B}{}}
+\newlabel{tab:all-results}{{2}{5}{All benchmark scores (0--100). I and M denote instruction and mathematics. $\mathrm {BWT}_1=S_1^2-S_1^1$; positive values indicate that training task 2 improved the first-task benchmark. Boldface is intentionally omitted because the best endpoint depends on the comparison of interest}{table.2}{}}
+\newlabel{fig:trajectories}{{2}{5}{Absolute benchmark trajectories. Stage 1 follows the first task in the named order; stage 2 follows the second. Axes are independently focused within panels, so numerical comparisons should use Table~\ref {tab:all-results}}{figure.2}{}}
+\newlabel{fig:bwt}{{3}{6}{\textbf {Left:} first-task backward transfer. Instruction-following retention is more rank-sensitive when mathematics is learned second; math-first interference is small and sometimes positive. \textbf {Right:} final score minus the unadapted checkpoint; middle-heavy IFEval$\rightarrow $Math GSM8K is the only positive cell}{figure.3}{}}
+\newlabel{fig:net}{{3}{6}{\textbf {Left:} first-task backward transfer. Instruction-following retention is more rank-sensitive when mathematics is learned second; math-first interference is small and sometimes positive. \textbf {Right:} final score minus the unadapted checkpoint; middle-heavy IFEval$\rightarrow $Math GSM8K is the only positive cell}{figure.3}{}}
+\newlabel{fig:calibration-gap}{{4}{6}{\textbf {Left:} every adapter improves assistant-token NLL on the decontaminated, training-derived calibration splits, while mean external benchmark net performance is negative; the panels use distinct units. \textbf {Right:} mean final net score at the common 5.898M-parameter budget; every point has the same true horizontal coordinate}{figure.4}{}}
+\newlabel{fig:parameters}{{4}{6}{\textbf {Left:} every adapter improves assistant-token NLL on the decontaminated, training-derived calibration splits, while mean external benchmark net performance is negative; the panels use distinct units. \textbf {Right:} mean final net score at the common 5.898M-parameter budget; every point has the same true horizontal coordinate}{figure.4}{}}
+\newlabel{app:spectral}{{C}{7}{}{appendix.C}{}}
+\newlabel{fig:spectral}{{5}{8}{Pilot-only spectral allocation (left) and cumulative energy of the factorized updates (right). Thin curves are block-wise averages over the two target modules; the thick curve is their median}{figure.5}{}}
+\gdef \@abspage@last{8}
